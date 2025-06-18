@@ -10,7 +10,13 @@ spring:
         locator:
           enabled: true
           lower-case-service-id: true
+      default-filters:
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 10
+            redis-rate-limiter.burstCapacity: 20
 
+# Actuator Gateway 觀測啟用
 management:
   endpoints:
     web:
