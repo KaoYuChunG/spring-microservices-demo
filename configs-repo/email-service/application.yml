@@ -7,7 +7,7 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 server:
-  port: 8090
+  port: 8093
 eureka:
   client:
     service-url:
