@@ -1,0 +1,16 @@
+server:
+  port: 0   # 建議用隨機 port，由 Eureka 記錄真實 port
+
+grpc:
+  server:
+    port: 9191
+    reflection-service-enabled: true
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+
+spring:
+  profiles:
+    active: dev
