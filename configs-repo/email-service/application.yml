@@ -1,6 +1,6 @@
 spring:
   kafka:
-    bootstrap-servers: kafka-1:9092
+    bootstrap-servers: broker1:9092
     consumer:
       group-id: email-group
       auto-offset-reset: earliest

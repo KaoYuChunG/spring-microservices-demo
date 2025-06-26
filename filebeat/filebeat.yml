@@ -1,0 +1,53 @@
+#filebeat.autodiscover:
+#  providers:
+#    - type: docker
+#      templates:
+#        - condition:
+#            contains:
+#              docker.container.name: "service"
+#          config:
+#            - type: log
+#              paths:
+#                - "/logs/${data.docker.container.name}/app.log"
+#              fields:
+#                service_name: "${data.docker.container.name}"
+#              fields_under_root: true
+#              processors:
+#                - dissect:
+#                    tokenizer: "/logs/%{service_name}/app.log"
+#                    field: "log.file.path"
+#                    target_prefix: ""
+#
+#output.kafka:
+#  hosts: ["kafka:9092"]
+#  topic: "logs-topic"
+#
+#
+#
+
+
+
+#filebeat.inputs:
+#  - type: log
+#    paths:
+#      - /logs/*/app.log     # ✅ 這裡會動態匹配 ./logs/任意子資料夾/app.log
+#    multiline.pattern: '^\d{4}-\d{2}-\d{2}'  # 根據 log 格式，支援多行日誌
+#    multiline.negate: true
+#    multiline.match: after
+#    scan_frequency: 10s    # 每 10 秒掃描新增檔案
+#
+#output.kafka:
+#  hosts: ["broker1:29092"]
+#  topic: "log-topic"
+
+
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /logs/*.log  # 掛載容器中的 logs 目錄
+    fields:
+      source: spring-server
+
+output.logstash:
+  hosts: ["logstash:5044"]  # 送到 logstash
