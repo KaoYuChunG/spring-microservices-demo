@@ -1,55 +1,57 @@
 version: '3.8'
 
 services:
-  # keycloak:
-  #   image: quay.io/keycloak/keycloak:24.0.1
-  #   container_name: keycloak
-  #   command: start-dev
-  #   ports:
-  #     - "9000:8080"
-  #   environment:
-  #     KEYCLOAK_ADMIN: admin
-  #     KEYCLOAK_ADMIN_PASSWORD: admin
-  #   volumes:
-  #     - keycloak_data:/opt/keycloak/data
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.1
+    container_name: keycloak
+    ports:
+     - "9000:8080"
+     - "5005:5005"   # Java remote debug
+    environment:
+      DB_VENDOR: postgres
+      DB_ADDR: keycloak-db
+      DB_DATABASE: keycloak
+      DB_USER: keycloak
+      DB_PASSWORD: password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      PROXY_ADDRESS_FORWARDING: 'true'
+      KEYCLOAK_IMPORT: /opt/keycloak/data/import/realm-export.json
+      JAVA_OPTS_APPEND: >
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+      - ./keycloak-providers:/opt/keycloak/providers
+    entrypoint: ["/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]
+    depends_on:
+      - keycloak-db
 
-  # keycloak-config:
-  #   image: adorsys/keycloak-config-cli:latest
-  #   container_name: keycloak-config
-  #   depends_on:
-  #     - keycloak
-  #   environment:
-  #     KEYCLOAK_URL: http://keycloak:8080
-  #     KEYCLOAK_USER: admin
-  #     KEYCLOAK_PASSWORD: admin
-  #     IMPORT_FILES_LOCATIONS: /config
-  #   volumes:
-  #     - keycloak-config:/config    
-#  postgres:
-#    image: postgres:15
-#    container_name: postgres
-#    environment:
-#      POSTGRES_DB: authdb
-#      POSTGRES_USER: authuser
-#      POSTGRES_PASSWORD: authpass
-#    ports:
-#      - "5432:5432"
-#    volumes:
-#      - ./init-db:/docker-entrypoint-initdb.d
+  keycloak-db:
+    image: postgres:15
+    container_name: keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
 #
-#  mysql:
-#    image: mysql:8.0
-#    container_name: mysql-db
-#    environment:
-#      MYSQL_ROOT_PASSWORD: rootpassword
-#      MYSQL_DATABASE: mydb
-#      MYSQL_USER: myuser
-#      MYSQL_PASSWORD: mypass
-#    ports:
-#      - "3306:3306"
-#    volumes:
-#      - ./mysql-data:/var/lib/mysql
-#    platform: linux/arm64 # M1 support
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: mydb
+      MYSQL_USER: myuser
+      MYSQL_PASSWORD: mypass
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    platform: linux/arm64 # M1 support
 
 #  elasticsearch:
 #    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
@@ -148,62 +150,62 @@ services:
       LOG_SEGMENT_BYTES: 1073741824
       LOG_RETENTION_CHECK_INTERVAL_MS: 300000
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
-      DEFAULT_REPLICATION_FACTOR: 2
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      DEFAULT_REPLICATION_FACTOR: 1
       MIN_INSYNC_REPLICAS: 1
       UNCLEAN_LEADER_ELECTION_ENABLE: false
     volumes:
       - broker1_data:/var/lib/kafka/data
 
-  broker2:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: broker2
-    depends_on:
-      - zookeeper
-    ports:
-      - "9093:9092"
-      - "29093:29093"
-    environment:
-      KAFKA_BROKER_ID: 2
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker2:9092,PLAINTEXT_HOST://localhost:29093
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      LOG_RETENTION_HOURS: 168
-      LOG_SEGMENT_BYTES: 1073741824
-      LOG_RETENTION_CHECK_INTERVAL_MS: 300000
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
-      DEFAULT_REPLICATION_FACTOR: 2
-      MIN_INSYNC_REPLICAS: 1
-      UNCLEAN_LEADER_ELECTION_ENABLE: false
-    volumes:
-      - broker2_data:/var/lib/kafka/data
-
-  broker3:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: broker3
-    depends_on:
-      - zookeeper
-    ports:
-      - "9094:9092"
-      - "29094:29094"
-    environment:
-      KAFKA_BROKER_ID: 3
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker3:9092,PLAINTEXT_HOST://localhost:29094
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29094
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      LOG_RETENTION_HOURS: 168
-      LOG_SEGMENT_BYTES: 1073741824
-      LOG_RETENTION_CHECK_INTERVAL_MS: 300000
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
-      DEFAULT_REPLICATION_FACTOR: 2
-      MIN_INSYNC_REPLICAS: 1
-      UNCLEAN_LEADER_ELECTION_ENABLE: false
-    volumes:
-      - broker3_data:/var/lib/kafka/data
+#  broker2:
+#    image: confluentinc/cp-kafka:7.5.0
+#    container_name: broker2
+#    depends_on:
+#      - zookeeper
+#    ports:
+#      - "9093:9092"
+#      - "29093:29093"
+#    environment:
+#      KAFKA_BROKER_ID: 2
+#      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker2:9092,PLAINTEXT_HOST://localhost:29093
+#      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29093
+#      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+#      LOG_RETENTION_HOURS: 168
+#      LOG_SEGMENT_BYTES: 1073741824
+#      LOG_RETENTION_CHECK_INTERVAL_MS: 300000
+#      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+#      DEFAULT_REPLICATION_FACTOR: 2
+#      MIN_INSYNC_REPLICAS: 1
+#      UNCLEAN_LEADER_ELECTION_ENABLE: false
+#    volumes:
+#      - broker2_data:/var/lib/kafka/data
+#
+#  broker3:
+#    image: confluentinc/cp-kafka:7.5.0
+#    container_name: broker3
+#    depends_on:
+#      - zookeeper
+#    ports:
+#      - "9094:9092"
+#      - "29094:29094"
+#    environment:
+#      KAFKA_BROKER_ID: 3
+#      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker3:9092,PLAINTEXT_HOST://localhost:29094
+#      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29094
+#      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+#      LOG_RETENTION_HOURS: 168
+#      LOG_SEGMENT_BYTES: 1073741824
+#      LOG_RETENTION_CHECK_INTERVAL_MS: 300000
+#      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+#      DEFAULT_REPLICATION_FACTOR: 2
+#      MIN_INSYNC_REPLICAS: 1
+#      UNCLEAN_LEADER_ELECTION_ENABLE: false
+#    volumes:
+#      - broker3_data:/var/lib/kafka/data
 
   eureka-server:
     image: kaoyuchun/eureka-server:1.0
@@ -241,16 +243,16 @@ services:
 #    volumes:
 #      - ./logs:/logs
 
-#  inventory-service:
-#    image: kaoyuchun/inventory-service:1.0
-#    container_name: inventory-service
-#    ports:
-#      - "8094:8094"
-#    environment:
-#      - SPRING_PROFILES_ACTIVE=prod
-#      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka
-#    depends_on:
-#      - eureka-server
+  inventory-service:
+    image: kaoyuchun/inventory-service:1.0
+    container_name: inventory-service
+    ports:
+      - "8094:8094"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka
+    depends_on:
+      - eureka-server
 
   config-server:
     image: kaoyuchun/config-server:1.0
@@ -269,8 +271,7 @@ volumes:
   mysql-data:
   logs:
   grafana-storage:
-  # keycloak_data:
-  # keycloak-config:
+  keycloak-db-data:
   broker1_data:
   broker2_data:
   broker3_data:

@@ -1,0 +1,58 @@
+{
+  "realm": "demo-realm",
+  "enabled": true,
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": false,
+      "firstName": "Ben",
+      "lastName": "User",
+      "email": "admin@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["ROLE_USER", "ROLE_ADMIN"]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "ROLE_USER",
+        "description": "Default role for regular users"
+      },
+      {
+        "name": "ROLE_ADMIN",
+        "description": "Admin role with full access"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "gateway-client",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "9PzOoC4Df7BeiTqH0XobICr6gV4N9RbZ",
+      "redirectUris": ["http://localhost:8080/*"],
+      "webOrigins": ["+"],
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": true,
+      "fullScopeAllowed": true,
+      "defaultClientScopes": ["profile", "email", "roles"],
+      "optionalClientScopes": [],
+      "attributes": {
+        "access.token.lifespan": "2592000",
+        "refresh.token.lifespan": "5184000",
+        "client.session.idle.timeout": "2592000",
+        "client.session.max.lifespan": "2592000"
+      }
+    }
+  ]
+}
