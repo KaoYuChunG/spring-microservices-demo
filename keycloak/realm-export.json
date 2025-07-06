@@ -12,7 +12,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "admin",
+          "value": "12345",
           "temporary": false
         }
       ],
@@ -35,15 +35,14 @@
     {
       "clientId": "gateway-client",
       "enabled": true,
-      "publicClient": false,
-      "secret": "9PzOoC4Df7BeiTqH0XobICr6gV4N9RbZ",
+      "secret": "Mp0YFofmoafVLyIOE5DpZhtSvxVkUrTm",
       "redirectUris": ["http://localhost:8080/*"],
-      "webOrigins": ["+"],
+      "webOrigins": ["*"],
       "protocol": "openid-connect",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": true,
-      "authorizationServicesEnabled": true,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
       "fullScopeAllowed": true,
       "defaultClientScopes": ["profile", "email", "roles"],
       "optionalClientScopes": [],

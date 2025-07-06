@@ -6,7 +6,6 @@ services:
     container_name: keycloak
     ports:
      - "9000:8080"
-     - "5005:5005"   # Java remote debug
     environment:
       DB_VENDOR: postgres
       DB_ADDR: keycloak-db
@@ -17,11 +16,10 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: admin
       PROXY_ADDRESS_FORWARDING: 'true'
       KEYCLOAK_IMPORT: /opt/keycloak/data/import/realm-export.json
-      JAVA_OPTS_APPEND: >
-        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+      JAVA_OPTS: >-
+        -Xms256m -Xmx512m -XX:MaxRAMPercentage=25.0
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
-      - ./keycloak-providers:/opt/keycloak/providers
     entrypoint: ["/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]
     depends_on:
       - keycloak-db
@@ -38,7 +36,6 @@ services:
     ports:
       - "5432:5432"
 
-#
   mysql:
     image: mysql:8.0
     container_name: mysql-db
@@ -53,75 +50,57 @@ services:
       - ./mysql-data:/var/lib/mysql
     platform: linux/arm64 # M1 support
 
-#  elasticsearch:
-#    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
-#    container_name: elasticsearch
-#    ports:
-#      - "9200:9200"
-#    environment:
-#      - discovery.type=single-node
-#      - xpack.security.enabled=false
-#      - xpack.security.transport.ssl.enabled=false
-##      - ES_JAVA_OPTS=-Xms1g -Xmx1g
-#      - ES_JAVA_OPTS=-Xms256m -Xmx256m
-#    ulimits:
-#      memlock:
-#        soft: -1
-#        hard: -1
-#    cap_add:
-#      - IPC_LOCK
-#    volumes:
-#      - esdata:/usr/share/elasticsearch/data
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: elasticsearch
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
 
 
-#  kibana:
-#    image: docker.elastic.co/kibana/kibana:8.13.4
-#    container_name: kibana
-#    environment:
-#      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-#    ports:
-#      - "5601:5601"
-#    depends_on:
-#      - elasticsearch
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
 
-#  logstash:
-#    image: docker.elastic.co/logstash/logstash:8.13.4
-#    container_name: logstash
-#    volumes:
-#      - ./logstash/pipeline:/usr/share/logstash/pipeline
-#    ports:
-#      - "5000:5000" # TCP input
-#      - "5044:5044" # Beats input
-#      - "9600:9600" # HTTP API
-#    depends_on:
-#      - broker1
-#      - elasticsearch
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.13.4
+    container_name: logstash
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+    ports:
+      - "5000:5000" # TCP input
+      - "5044:5044" # Beats input
+      - "9600:9600" # HTTP API
+    depends_on:
+      - broker1
+      - elasticsearch
 
-#  filebeat:
-#    image: docker.elastic.co/beats/filebeat:8.13.4
-#    volumes:
-#      - ./logs:/logs              # 掛載 spring log 資料夾
-#      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
-#    depends_on:
-#      - broker1
-#      - logstash
-
-  #  prometheus:
-  #    image: prom/prometheus
-  #    ports:
-  #      - "9090:9090"
-  #    volumes:
-  #      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-  #
-  #  grafana:
-  #    image: grafana/grafana
-  #    ports:
-  #      - "3000:3000"
-  #    environment:
-  #      - GF_SECURITY_ADMIN_USER=admin
-  #      - GF_SECURITY_ADMIN_PASSWORD=admin
-  #    volumes:
-  #      - grafana-storage:/var/lib/grafana
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.13.4
+    volumes:
+      - ./logs:/logs              # 掛載 spring log 資料夾
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+    depends_on:
+      - broker1
+      - logstash
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -132,6 +111,18 @@ services:
     ports:
       - "2181:2181"
 
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8086:8086"
+    depends_on:
+      - broker1
+    environment:
+      KAFKA_CLUSTERS_NAME: local
+      KAFKA_CLUSTERS_BOOTSTRAPSERVERS: broker:29092
+      #      KAFKA_CLUSTERS_SCHEMAREGISTRY: http://schema-registry:8081
+      DYNAMIC_CONFIG_ENABLED: 'true'   # Uncomment the following lines to enable multiple Kafka brokers
   broker1:
     image: confluentinc/cp-kafka:7.5.0
     container_name: broker1
@@ -150,62 +141,62 @@ services:
       LOG_SEGMENT_BYTES: 1073741824
       LOG_RETENTION_CHECK_INTERVAL_MS: 300000
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      DEFAULT_REPLICATION_FACTOR: 2
       MIN_INSYNC_REPLICAS: 1
       UNCLEAN_LEADER_ELECTION_ENABLE: false
     volumes:
       - broker1_data:/var/lib/kafka/data
 
-#  broker2:
-#    image: confluentinc/cp-kafka:7.5.0
-#    container_name: broker2
-#    depends_on:
-#      - zookeeper
-#    ports:
-#      - "9093:9092"
-#      - "29093:29093"
-#    environment:
-#      KAFKA_BROKER_ID: 2
-#      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker2:9092,PLAINTEXT_HOST://localhost:29093
-#      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29093
-#      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-#      LOG_RETENTION_HOURS: 168
-#      LOG_SEGMENT_BYTES: 1073741824
-#      LOG_RETENTION_CHECK_INTERVAL_MS: 300000
-#      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
-#      DEFAULT_REPLICATION_FACTOR: 2
-#      MIN_INSYNC_REPLICAS: 1
-#      UNCLEAN_LEADER_ELECTION_ENABLE: false
-#    volumes:
-#      - broker2_data:/var/lib/kafka/data
-#
-#  broker3:
-#    image: confluentinc/cp-kafka:7.5.0
-#    container_name: broker3
-#    depends_on:
-#      - zookeeper
-#    ports:
-#      - "9094:9092"
-#      - "29094:29094"
-#    environment:
-#      KAFKA_BROKER_ID: 3
-#      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker3:9092,PLAINTEXT_HOST://localhost:29094
-#      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29094
-#      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-#      LOG_RETENTION_HOURS: 168
-#      LOG_SEGMENT_BYTES: 1073741824
-#      LOG_RETENTION_CHECK_INTERVAL_MS: 300000
-#      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
-#      DEFAULT_REPLICATION_FACTOR: 2
-#      MIN_INSYNC_REPLICAS: 1
-#      UNCLEAN_LEADER_ELECTION_ENABLE: false
-#    volumes:
-#      - broker3_data:/var/lib/kafka/data
+  broker2:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: broker2
+    depends_on:
+      - zookeeper
+    ports:
+      - "9093:9092"
+      - "29093:29093"
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker2:9092,PLAINTEXT_HOST://localhost:29093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      LOG_RETENTION_HOURS: 168
+      LOG_SEGMENT_BYTES: 1073741824
+      LOG_RETENTION_CHECK_INTERVAL_MS: 300000
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      DEFAULT_REPLICATION_FACTOR: 2
+      MIN_INSYNC_REPLICAS: 1
+      UNCLEAN_LEADER_ELECTION_ENABLE: false
+    volumes:
+      - broker2_data:/var/lib/kafka/data
+
+  broker3:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: broker3
+    depends_on:
+      - zookeeper
+    ports:
+      - "9094:9092"
+      - "29094:29094"
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker3:9092,PLAINTEXT_HOST://localhost:29094
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      LOG_RETENTION_HOURS: 168
+      LOG_SEGMENT_BYTES: 1073741824
+      LOG_RETENTION_CHECK_INTERVAL_MS: 300000
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      DEFAULT_REPLICATION_FACTOR: 2
+      MIN_INSYNC_REPLICAS: 1
+      UNCLEAN_LEADER_ELECTION_ENABLE: false
+    volumes:
+      - broker3_data:/var/lib/kafka/data
 
   eureka-server:
     image: kaoyuchun/eureka-server:1.0
@@ -215,33 +206,33 @@ services:
     # environment:
     #   - SPRING_PROFILES_ACTIVE=docker
 
-#  log-service:
-#    image: kaoyuchun/log-service:1.0
-#    container_name: log-service
-#    ports:
-#      - "8091:8091"
-#    environment:
-#      - SPRING_PROFILES_ACTIVE=prod
-#      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka
-#    depends_on:
-#      - eureka-server
-#      - broker1
-#    volumes:
-#      - ./logs:/logs
+  log-service:
+    image: kaoyuchun/log-service:1.0
+    container_name: log-service
+    ports:
+      - "8091:8091"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka
+    depends_on:
+      - eureka-server
+      - broker1
+    volumes:
+      - ./logs:/logs
 
-#  email-service:
-#    image: kaoyuchun/email-service:1.0
-#    container_name: email-service
-#    ports:
-#      - "8093:8093"
-#    environment:
-#      - SPRING_PROFILES_ACTIVE=prod
-#      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka
-#    depends_on:
-#      - eureka-server
-#      - broker1
-#    volumes:
-#      - ./logs:/logs
+  email-service:
+    image: kaoyuchun/email-service:1.0
+    container_name: email-service
+    ports:
+      - "8093:8093"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka
+    depends_on:
+      - eureka-server
+      - broker1
+    volumes:
+      - ./logs:/logs
 
   inventory-service:
     image: kaoyuchun/inventory-service:1.0
