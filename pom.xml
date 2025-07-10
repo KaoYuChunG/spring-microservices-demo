@@ -1,51 +1,46 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.2.4</version>
+    <relativePath/>
+  </parent>
+  <groupId>com.programming.techie</groupId>
+  <artifactId>spring-boot-3-microservices</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
 
-    <!-- 父專案的 groupId / artifactId / version -->
-    <groupId>com.kao</groupId>
-    <artifactId>microservices</artifactId>
-    <version>1.0.0</version>
-    <packaging>pom</packaging>
+  <name>spring-boot-3-microservices</name>
+  <modules>
+    <module>api-gateway</module>
+    <module>product-service</module>
+    <module>order-service</module>
+    <module>inventory-service</module>
+    <module>notification-service</module>
+    <module>shared-proto</module>
+  </modules>
 
-    <name>microservices</name>
-
-    <!-- Java 版本設定 -->
-    <properties>
-        <java.version>17</java.version>
-    </properties>
-
-    <!-- 定義所有子模組 -->
-    <modules>
-        <module>shared-proto</module>
-        <module>grpc-service</module>
-        <module>order-service</module>
-        <module>user-service</module>
-        <module>inventory-service</module>
-        <module>log-service</module>
-        <module>email-service</module>
-        <module>gateway-service</module>
-    </modules>
-
-    <dependencies>
-
-    </dependencies>
-    <!-- 統一管理子模組用到的 dependency 版本（可選） -->
-    <dependencyManagement>
-        <dependencies>
-            <!-- 可以統一管理 Spring Boot、gRPC 版本 -->
-            <dependency>
-
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>3.2.5</version> <!-- 可換成你正在用的版本 -->
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
-    <!-- 父專案通常不需要 dependencies，留空也沒關係 -->
+  <properties>
+    <java.version>21</java.version>
+    <spring-cloud.version>2023.0.1</spring-cloud.version>
+<!--    <dockerPassword>${dockerPassword}</dockerPassword>-->
+  </properties>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+            </exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>

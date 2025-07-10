@@ -1,17 +1,11 @@
 syntax = "proto3";
 
-option java_package = "com.example.proto";
-option java_multiple_files = true;
+option java_package = "com.microservices.proto";
 
-service StockService {
-  rpc CheckStock (StockRequest) returns (StockReply);
-}
-
-message StockRequest {
-  string productId = 1;
-}
-
-message StockReply {
-  bool inStock = 1;
-  int32 quantity = 2;
+// 訂單已下單事件的訊息定義
+message OrderPlacedEvent {
+  string orderNumber = 1;
+  string email = 2;
+  string firstName = 3;
+  string lastName = 4;
 }
